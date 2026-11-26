@@ -1,0 +1,3 @@
+# Wokwi Library Manager
+ESP32Servo
+LiquidCrystal I2C

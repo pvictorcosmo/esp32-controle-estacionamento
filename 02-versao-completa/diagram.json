@@ -1,0 +1,79 @@
+{
+  "version": 1,
+  "author": "Laboratório de Sistemas Embarcados",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "wokwi-esp32-devkit-v1", "id": "esp", "top": 0, "left": 0, "attrs": {} },
+
+    { "type": "wokwi-lcd1602", "id": "lcd", "top": -230, "left": -60,
+      "attrs": { "pins": "i2c", "i2cAddress": "0x27" } },
+
+    { "type": "wokwi-hc-sr04", "id": "usEntrada", "top": -110, "left": -330,
+      "attrs": { "distance": "300" } },
+    { "type": "wokwi-hc-sr04", "id": "usSaida", "top": 250, "left": -330,
+      "attrs": { "distance": "300" } },
+
+    { "type": "wokwi-pushbutton", "id": "btnEntrada", "top": 40, "left": -250,
+      "attrs": { "color": "green", "key": "e", "label": "ENTRADA" } },
+    { "type": "wokwi-pushbutton", "id": "btnSaida", "top": 140, "left": -250,
+      "attrs": { "color": "blue", "key": "s", "label": "SAÍDA" } },
+
+    { "type": "wokwi-led", "id": "ledVerde", "top": -60, "left": 250,
+      "attrs": { "color": "green", "label": "VAGAS" } },
+    { "type": "wokwi-led", "id": "ledVermelho", "top": -60, "left": 320,
+      "attrs": { "color": "red", "label": "LOTADO" } },
+    { "type": "wokwi-resistor", "id": "rVerde", "top": 40, "left": 210, "rotate": 90,
+      "attrs": { "value": "220" } },
+    { "type": "wokwi-resistor", "id": "rVermelho", "top": 40, "left": 280, "rotate": 90,
+      "attrs": { "value": "220" } },
+
+    { "type": "wokwi-buzzer", "id": "buzzer", "top": -70, "left": 400,
+      "attrs": { "volume": "0.15" } },
+
+    { "type": "wokwi-servo", "id": "servoEntrada", "top": 170, "left": 230,
+      "attrs": { "horn": "single" } },
+    { "type": "wokwi-servo", "id": "servoSaida", "top": 290, "left": 230,
+      "attrs": { "horn": "single" } }
+  ],
+  "connections": [
+    [ "esp:TX0", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX0", "$serialMonitor:TX", "", [] ],
+
+    [ "lcd:SDA", "esp:D21", "purple", [] ],
+    [ "lcd:SCL", "esp:D22", "gold", [] ],
+    [ "lcd:VCC", "esp:VIN", "red", [] ],
+    [ "lcd:GND", "esp:GND.1", "black", [] ],
+
+    [ "usEntrada:TRIG", "esp:D13", "orange", [] ],
+    [ "usEntrada:ECHO", "esp:D14", "cyan", [] ],
+    [ "usEntrada:VCC", "esp:VIN", "red", [] ],
+    [ "usEntrada:GND", "esp:GND.2", "black", [] ],
+    [ "usSaida:TRIG", "esp:D27", "orange", [] ],
+    [ "usSaida:ECHO", "esp:D34", "cyan", [] ],
+    [ "usSaida:VCC", "esp:VIN", "red", [] ],
+    [ "usSaida:GND", "esp:GND.2", "black", [] ],
+
+    [ "btnEntrada:1.r", "esp:D18", "green", [] ],
+    [ "btnEntrada:2.l", "esp:GND.2", "black", [] ],
+    [ "btnSaida:1.r", "esp:D19", "blue", [] ],
+    [ "btnSaida:2.l", "esp:GND.2", "black", [] ],
+
+    [ "esp:D32", "rVerde:2", "green", [] ],
+    [ "rVerde:1", "ledVerde:A", "green", [] ],
+    [ "ledVerde:C", "esp:GND.1", "black", [] ],
+    [ "esp:D33", "rVermelho:2", "red", [] ],
+    [ "rVermelho:1", "ledVermelho:A", "red", [] ],
+    [ "ledVermelho:C", "esp:GND.1", "black", [] ],
+
+    [ "buzzer:2", "esp:D23", "violet", [] ],
+    [ "buzzer:1", "esp:GND.1", "black", [] ],
+
+    [ "servoEntrada:PWM", "esp:D25", "orange", [] ],
+    [ "servoEntrada:V+", "esp:VIN", "red", [] ],
+    [ "servoEntrada:GND", "esp:GND.1", "black", [] ],
+    [ "servoSaida:PWM", "esp:D26", "orange", [] ],
+    [ "servoSaida:V+", "esp:VIN", "red", [] ],
+    [ "servoSaida:GND", "esp:GND.1", "black", [] ]
+  ],
+  "dependencies": {}
+}
