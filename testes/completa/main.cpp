@@ -39,11 +39,15 @@ int main(){ for(int i=0;i<40;i++)pinv[i]=HIGH; pinv[14]=pinv[34]=LOW; distCm[14]
  run(4000); CHECK(veiculos==v0+1&&cancelaEntrada.estado==EstadoCancela::ABERTA,"SEGURANCA nao fecha com veiculo embaixo");
  distCm[14]=60; run(400); CHECK(cancelaEntrada.estado==EstadoCancela::ABERTA,"HISTERESE 60cm ainda presente");
  distCm[14]=300; run(800); CHECK(cancelaEntrada.estado==EstadoCancela::FECHADA&&veiculos==v0+1,"veiculo saiu -> fecha sem contar de novo");
- press(18); run(2600); CHECK(cancelaEntrada.estado==EstadoCancela::FECHANDO,"fechando...");
- int v1=veiculos; distCm[14]=20; run(400); CHECK(cancelaEntrada.estaAberta()&&veiculos==v1+1,"REABERTURA ao detectar durante fechamento");
- distCm[14]=300; run(4000);
- distCm[34]=25; run(400); CHECK(veiculos==v1,"SENSOR saida decrementa"); distCm[34]=300; run(4000);
- distCm[14]=45; run(30); distCm[14]=300; run(300); CHECK(veiculos==v1,"ruido de 1 leitura ignorado");
+ press(18); run(2350); int v1=veiculos; distCm[14]=20; run(400); int ang=servoAng[25]; run(1000);
+ CHECK(cancelaEntrada.estado==EstadoCancela::FECHANDO&&servoAng[25]==ang&&ang>0&&veiculos==v1,"PAUSA: nao desce sobre veiculo e nao conta");
+ distCm[14]=300; run(4000); CHECK(cancelaEntrada.estado==EstadoCancela::FECHADA,"retoma e fecha quando libera");
+ int v2=veiculos; press(18); press(18); press(18); CHECK(veiculos==v2+1,"1 CARRO POR CICLO: 3 cliques = 1 entrada"); run(3000);
+ press(18); CHECK(veiculos==v2+2,"novo ciclo depois de fechar"); run(3000);
+ press(19); press(19); CHECK(veiculos==v2+1,"1 por ciclo na saida tambem"); run(3000);
+ v1=veiculos;
+ distCm[34]=25; run(400); CHECK(veiculos==v1-1,"SENSOR saida decrementa"); distCm[34]=300; run(4000);
+ distCm[14]=45; run(30); distCm[14]=300; run(300); CHECK(veiculos==v1-1,"ruido de 1 leitura ignorado");
  // web
  WiFi.st=WL_CONNECTED; run(600); CHECK(servidorAtivo,"servidor web iniciado");
  servidor.argv="teste"; servidor.r["/api/comando"](); CHECK(veiculos==29&&servidor.lastCode==200,"API comando teste");

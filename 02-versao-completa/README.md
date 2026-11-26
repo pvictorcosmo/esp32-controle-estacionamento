@@ -11,7 +11,8 @@ Parte da versão de referência e soma as **três atividades do roteiro**, mais 
 | 📟 | **LCD 16×2 I2C** *(Atividade 1)* | Ocupadas/livres, ícones das cancelas (aberta/fechada), avisos temporários (“BEM-VINDO!”, “ACESSO NEGADO”, IP do Wi-Fi) e tela de abertura. Só reescreve o que mudou, sem I2C desnecessário. |
 | 📡 | **Sensores HC-SR04** *(Atividade 2)* | Eco medido **por interrupção**, sem `pulseIn()` bloqueante. Medição alternada entre os dois sensores, **histerese** (entra < 50 cm, sai > 70 cm) e **3 leituras seguidas** para confirmar, o que elimina ruído. |
 | 🌐 | **Painel Web** *(Atividade 3)* | Página responsiva servida pelo próprio ESP32: anel de ocupação, mapa das 30 vagas, cancelas animadas, distância dos sensores, estatísticas, histórico e botões de comando. API JSON em `/api/estado`. |
-| 🛡️ | **Cancela segura** | Não fecha com veículo embaixo e **reabre** se detectar veículo durante o fechamento. |
+| 🚧 | **1 veículo por ciclo** | Enquanto a cancela não volta a fechar, novos pedidos (botão, sensor, web ou serial) são ignorados com o aviso “AGUARDE”. Apertar várias vezes = 1 entrada. |
+| 🛡️ | **Cancela segura** | Não desce sobre um veículo: espera aberta e **pausa o fechamento** se detectar algo embaixo, continuando quando libera. |
 | 🎚️ | **Movimento suave** | Máquina de estados `FECHADA → ABRINDO → ABERTA → FECHANDO`, servo girando ~3° a cada 10 ms. |
 | 🔊 | **Buzzer** | Sons diferentes para entrada, saída, negado, lotado e alerta. Sequenciador não bloqueante; dá para silenciar pelo serial ou pela web. |
 | 💾 | **Persistência** | Contador e estatísticas salvos na flash (NVS) e restaurados após reiniciar. |
@@ -95,6 +96,6 @@ Exemplo de `/api/estado`:
 
 ## 🔁 Diferenças de comportamento em relação à v1
 
-- **Cada detecção conta um veículo.** Se um novo veículo chega com a cancela aberta, ele é contado e o tempo de 2,5 s recomeça. (Na v1 o pedido era ignorado enquanto a cancela estava aberta.)
-- **O fechamento espera o veículo sair** do alcance do sensor (segurança).
+- **Mesma regra de 1 veículo por abertura:** pedidos feitos com a cancela aberta, abrindo ou fechando são ignorados até ela fechar.
+- **O fechamento espera o veículo sair** do alcance do sensor e pausa se algo aparecer embaixo (segurança).
 - **O contador sobrevive a reinicializações** (`PERSISTIR_DADOS` na seção 1 do `sketch.ino`; mude para `false` se quiser começar sempre do zero).

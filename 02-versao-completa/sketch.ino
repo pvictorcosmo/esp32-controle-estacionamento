@@ -14,8 +14,10 @@
  *   Extras
  *   • Cancelas com movimento suave e máquina de estados
  *     (FECHADA → ABRINDO → ABERTA → FECHANDO)
- *   • Segurança: a cancela não fecha com veículo embaixo e reabre se
- *     um veículo for detectado durante o fechamento
+ *   • 1 veículo por ciclo: com a cancela fora de FECHADA, novos pedidos
+ *     (botão, sensor, web, serial) são ignorados até ela fechar
+ *   • Segurança: a cancela não desce sobre um veículo (espera aberta
+ *     e pausa o fechamento se detectar algo embaixo)
  *   • Buzzer com sons distintos (entrada, saída, negado, lotado)
  *   • Contador e estatísticas salvos na flash (NVS / Preferences)
  *   • Histórico dos últimos eventos (serial, web)
@@ -478,7 +480,7 @@ struct SensorUltrassonico {
 //  Cancela — máquina de estados com movimento suave e segurança
 // ═════════════════════════════════════════════════════════════════════
 enum class EstadoCancela : uint8_t { FECHADA, ABRINDO, ABERTA, FECHANDO };
-enum class EventoCancela : uint8_t { NADA, FECHOU, OBSTRUIDA, REABERTURA };
+enum class EventoCancela : uint8_t { NADA, FECHOU, OBSTRUIDA, PAUSADA };
 
 struct Cancela {
   const char*         nome;
@@ -504,12 +506,15 @@ struct Cancela {
   bool estaAberta() const { return estado != EstadoCancela::FECHADA; }
   bool obstruida()  const { return sensor != nullptr && sensor->presente; }
 
-  // Abre (ou mantém aberta) e reinicia a contagem de 2,5 s
-  void abrir() {
+  // Inicia um ciclo: abre, espera 2,5 s e fecha. Só abre se estiver
+  // FECHADA — 1 ciclo = 1 veículo. Retorna false se já estava em ciclo.
+  bool abrir() {
+    if (estado != EstadoCancela::FECHADA) return false;
     instanteAbertura = millis();
     avisouObstrucao  = false;
-    if (estado != EstadoCancela::ABERTA) estado = EstadoCancela::ABRINDO;
+    estado           = EstadoCancela::ABRINDO;
     aberturas++;
+    return true;
   }
 
   // Move o servo um passo em direção ao alvo; true quando chegou
@@ -545,12 +550,11 @@ struct Cancela {
         break;
 
       case EstadoCancela::FECHANDO:
-        if (obstruida()) {                         // apareceu veículo: reabre
-          estado           = EstadoCancela::ABRINDO;
-          instanteAbertura = agora;
-          avisouObstrucao  = false;
-          return EventoCancela::REABERTURA;
+        if (obstruida()) {                         // algo embaixo: pausa
+          if (!avisouObstrucao) { avisouObstrucao = true; return EventoCancela::PAUSADA; }
+          break;                                   // não desce sobre o veículo
         }
+        avisouObstrucao = false;                   // liberou: continua descendo
         if (moverPara(ANGULO_FECHADA)) {
           estado = EstadoCancela::FECHADA;
           return EventoCancela::FECHOU;
@@ -859,7 +863,15 @@ void definirVeiculos(int valor) {
 // ═════════════════════════════════════════════════════════════════════
 //  Regras de negócio (origem: "sensor", "botão", "web", "serial")
 // ═════════════════════════════════════════════════════════════════════
+// Pedido durante um ciclo da cancela: ignorado (1 veículo por abertura)
+void avisarAguarde(const char* cancela, const char* origem) {
+  registrar(EV_ALERTA, "Aguarde (%s): cancela de %s em uso - 1 veículo por vez", origem, cancela);
+  lcdAvisar("AGUARDE CANCELA");
+  TOCAR(SOM_ALERTA);
+}
+
 void processarEntrada(const char* origem) {
+  if (cancelaEntrada.estaAberta()) { avisarAguarde("entrada", origem); return; }
   if (veiculos >= CAPACIDADE) {
     stats.negados++;
     dadosAlterados = true;
@@ -885,6 +897,7 @@ void processarEntrada(const char* origem) {
 }
 
 void processarSaida(const char* origem) {
+  if (cancelaSaida.estaAberta()) { avisarAguarde("saída", origem); return; }
   if (veiculos <= 0) {
     registrar(EV_ALERTA, "Saída ignorada (%s): nenhum veículo", origem);
     imprimirStatus();
@@ -912,8 +925,8 @@ void tratarEventoCancela(Cancela& c, EventoCancela ev) {
       registrar(EV_ALERTA, "Veículo sob a cancela de %s - fechamento adiado", c.nome);
       TOCAR(SOM_ALERTA);
       break;
-    case EventoCancela::REABERTURA:
-      registrar(EV_ALERTA, "Reabertura de segurança na cancela de %s", c.nome);
+    case EventoCancela::PAUSADA:
+      registrar(EV_ALERTA, "Veículo sob a cancela de %s - fechamento pausado", c.nome);
       TOCAR(SOM_ALERTA);
       break;
     case EventoCancela::NADA:
@@ -938,8 +951,8 @@ void agendarSensores() {
 bool executarComando(const String& acao, const char* origem) {
   if (acao == "entrada")            processarEntrada(origem);
   else if (acao == "saida")         processarSaida(origem);
-  else if (acao == "abrir_entrada") { cancelaEntrada.abrir(); registrar(EV_CANCELA, "Abertura manual da entrada (%s)", origem); }
-  else if (acao == "abrir_saida")   { cancelaSaida.abrir();   registrar(EV_CANCELA, "Abertura manual da saída (%s)", origem); }
+  else if (acao == "abrir_entrada") { if (cancelaEntrada.abrir()) registrar(EV_CANCELA, "Abertura manual da entrada (%s)", origem); else avisarAguarde("entrada", origem); }
+  else if (acao == "abrir_saida")   { if (cancelaSaida.abrir())   registrar(EV_CANCELA, "Abertura manual da saída (%s)", origem);   else avisarAguarde("saída", origem); }
   else if (acao == "teste")         { definirVeiculos(CAPACIDADE - 1); registrar(EV_TESTE, "Contador ajustado para %d (%s)", CAPACIDADE - 1, origem); imprimirStatus(); }
   else if (acao == "zerar")         { definirVeiculos(0); registrar(EV_TESTE, "Contador zerado (%s)", origem); imprimirStatus(); }
   else if (acao == "zerar_stats")   { stats = Estatisticas(); stats.pico = veiculos; dadosAlterados = true; registrar(EV_TESTE, "Estatísticas zeradas (%s)", origem); }

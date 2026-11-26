@@ -11,7 +11,7 @@ Sistema embarcado com **ESP32** que controla a entrada e a saída de veículos d
 | Pasta | O que é |
 |---|---|
 | [`01-referencia/`](01-referencia/) | **Versão de referência** do roteiro: botões, 2 servos, LEDs, contador 0–30, debounce de 40 ms, fechamento automático em 2,5 s com `millis()`, comandos `T`/`R` no serial. |
-| [`02-versao-completa/`](02-versao-completa/) | **Versão completa (v2)**: tudo da referência + as 3 atividades (**LCD 16×2 I2C**, **sensores HC-SR04**, **painel Web via Wi-Fi**) + extras: cancela com sensor de segurança, movimento suave, buzzer, persistência na flash, histórico e API JSON. |
+| [`02-versao-completa/`](02-versao-completa/) | **Versão completa (v2)**: tudo da referência + as 3 atividades (**LCD 16×2 I2C**, **sensores HC-SR04**, **painel Web via Wi-Fi**) + extras: 1 veículo por ciclo da cancela, sensor de segurança, movimento suave, buzzer, persistência na flash, histórico e API JSON. |
 | [`testes/`](testes/) | Testes automatizados que rodam no PC (g++), simulando pinos, tempo, sensores, LCD e servidor web. |
 
 ## ✅ Requisitos atendidos
@@ -38,7 +38,7 @@ Sistema embarcado com **ESP32** que controla a entrada e a saída de veículos d
 ./testes/rodar.sh
 ```
 
-Roda o plano de testes do roteiro (TF01–TF10) nas duas versões, mais os testes da v2: sensores, histerese, ruído, segurança da cancela, reabertura, API web e persistência. Os testes validam a **lógica** no PC; o comportamento final deve ser conferido também na simulação do Wokwi.
+Roda o plano de testes do roteiro (TF01–TF10) nas duas versões, mais os testes da v2: sensores, histerese, ruído, 1 veículo por ciclo, segurança da cancela, API web e persistência. Os testes validam a **lógica** no PC; o comportamento final deve ser conferido também na simulação do Wokwi.
 
 ## 🚀 Começando
 
