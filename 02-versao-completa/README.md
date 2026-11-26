@@ -24,10 +24,7 @@ Tudo roda **sem `delay()` no loop**: botões, sensores, servos, buzzer, LCD, Wi-
 
 | Arquivo | Conteúdo |
 |---|---|
-| `sketch.ino` | Lógica principal: regras, LCD, NVS, serial, web, `setup()`/`loop()` |
-| `componentes.h` | Tipos: `Botao`, `SensorUltrassonico`, `Cancela`, `Buzzer`, eventos |
-| `config.h` | **Todos** os pinos, tempos, limiares e credenciais Wi-Fi |
-| `pagina_web.h` | Painel web (HTML + CSS + JS, autocontido) |
+| `sketch.ino` | Firmware **em arquivo único**, dividido em seções: 1. Configuração (pinos, tempos, Wi-Fi) · 2. Página web · 3. Estado global · 4. Componentes (`Botao`, `SensorUltrassonico`, `Cancela`, `Buzzer`) · 5. Lógica · 6. `setup()`/`loop()` |
 | `diagram.json` | Circuito do Wokwi |
 | `libraries.txt` | `ESP32Servo`, `LiquidCrystal I2C` |
 
@@ -48,10 +45,9 @@ Tudo roda **sem `delay()` no loop**: botões, sensores, servos, buzzer, LCD, Wi-
 ## ▶️ Rodando no Wokwi
 
 1. Crie um projeto **ESP32** no Wokwi.
-2. Cole `sketch.ino` e `diagram.json`.
-3. Crie os arquivos `config.h`, `componentes.h` e `pagina_web.h` (botão **+** ao lado das abas) e cole o conteúdo de cada um.
-4. Adicione as bibliotecas **ESP32Servo** e **LiquidCrystal I2C** no Library Manager.
-5. **Start Simulation**.
+2. Cole `sketch.ino` e `diagram.json` nas abas de mesmo nome.
+3. No **Library Manager**, adicione **ESP32Servo** e **LiquidCrystal I2C**.
+4. **Start Simulation**.
 
 ### Simulando um veículo com o sensor
 
@@ -63,7 +59,7 @@ Clique no HC-SR04 durante a simulação e arraste a distância:
 
 ### Abrindo o painel web
 
-O ESP32 conecta na rede `Wokwi-GUEST` e mostra o IP no serial e no LCD. Para abrir a página **pelo navegador**, o Wokwi exige o *Private IoT Gateway* (recurso do plano pago Wokwi Club): com ele rodando, acesse `http://localhost:9080`. Em um ESP32 real, basta trocar `WIFI_SSID`/`WIFI_SENHA` no `config.h` e abrir o IP mostrado (ou `http://estacionamento.local`).
+O ESP32 conecta na rede `Wokwi-GUEST` e mostra o IP no serial e no LCD. Para abrir a página **pelo navegador**, o Wokwi exige o *Private IoT Gateway* (recurso do plano pago Wokwi Club): com ele rodando, acesse `http://localhost:9080`. Em um ESP32 real, basta trocar `WIFI_SSID`/`WIFI_SENHA` na seção 1 do `sketch.ino` e abrir o IP mostrado (ou `http://estacionamento.local`).
 
 ## ⌨️ Comandos do monitor serial
 
@@ -101,4 +97,4 @@ Exemplo de `/api/estado`:
 
 - **Cada detecção conta um veículo.** Se um novo veículo chega com a cancela aberta, ele é contado e o tempo de 2,5 s recomeça. (Na v1 o pedido era ignorado enquanto a cancela estava aberta.)
 - **O fechamento espera o veículo sair** do alcance do sensor (segurança).
-- **O contador sobrevive a reinicializações** (`PERSISTIR_DADOS` em `config.h`; mude para `false` se quiser começar sempre do zero).
+- **O contador sobrevive a reinicializações** (`PERSISTIR_DADOS` na seção 1 do `sketch.ino`; mude para `false` se quiser começar sempre do zero).
