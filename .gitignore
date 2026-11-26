@@ -1,0 +1,8 @@
+.pio/
+build/
+.vscode/
+*.bin
+*.elf
+testes/**/estado.json
+testes/**/pagina.html
+testes/**/serial.txt

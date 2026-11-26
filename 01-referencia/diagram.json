@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "author": "Laboratório de Sistemas Embarcados",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "wokwi-esp32-devkit-v1", "id": "esp", "top": 0, "left": 0, "attrs": {} },
+
+    { "type": "wokwi-pushbutton", "id": "btnEntrada", "top": 60, "left": -230,
+      "attrs": { "color": "green", "key": "e", "label": "ENTRADA", "bounce": "1" } },
+    { "type": "wokwi-pushbutton", "id": "btnSaida", "top": 160, "left": -230,
+      "attrs": { "color": "blue", "key": "s", "label": "SAÍDA", "bounce": "1" } },
+
+    { "type": "wokwi-led", "id": "ledVerde", "top": -110, "left": 230,
+      "attrs": { "color": "green", "label": "VAGAS" } },
+    { "type": "wokwi-led", "id": "ledVermelho", "top": -110, "left": 300,
+      "attrs": { "color": "red", "label": "LOTADO" } },
+    { "type": "wokwi-resistor", "id": "rVerde", "top": -10, "left": 190, "rotate": 90,
+      "attrs": { "value": "220" } },
+    { "type": "wokwi-resistor", "id": "rVermelho", "top": -10, "left": 260, "rotate": 90,
+      "attrs": { "value": "220" } },
+
+    { "type": "wokwi-servo", "id": "servoEntrada", "top": 230, "left": 210,
+      "attrs": { "horn": "single" } },
+    { "type": "wokwi-servo", "id": "servoSaida", "top": 340, "left": 210,
+      "attrs": { "horn": "single" } }
+  ],
+  "connections": [
+    [ "esp:TX0", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX0", "$serialMonitor:TX", "", [] ],
+
+    [ "btnEntrada:1.r", "esp:D18", "green", [] ],
+    [ "btnEntrada:2.l", "esp:GND.2", "black", [] ],
+    [ "btnSaida:1.r", "esp:D19", "blue", [] ],
+    [ "btnSaida:2.l", "esp:GND.2", "black", [] ],
+
+    [ "esp:D21", "rVerde:2", "green", [] ],
+    [ "rVerde:1", "ledVerde:A", "green", [] ],
+    [ "ledVerde:C", "esp:GND.1", "black", [] ],
+    [ "esp:D22", "rVermelho:2", "red", [] ],
+    [ "rVermelho:1", "ledVermelho:A", "red", [] ],
+    [ "ledVermelho:C", "esp:GND.1", "black", [] ],
+
+    [ "servoEntrada:PWM", "esp:D25", "orange", [] ],
+    [ "servoEntrada:V+", "esp:VIN", "red", [] ],
+    [ "servoEntrada:GND", "esp:GND.1", "black", [] ],
+    [ "servoSaida:PWM", "esp:D26", "orange", [] ],
+    [ "servoSaida:V+", "esp:VIN", "red", [] ],
+    [ "servoSaida:GND", "esp:GND.1", "black", [] ]
+  ],
+  "dependencies": {}
+}
