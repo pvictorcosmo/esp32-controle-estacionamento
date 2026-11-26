@@ -1,14 +1,14 @@
 #include "Arduino.h"
 #include "WiFi.h"
 unsigned long T=0,uoff=0; int pinv[40]; int servoAng[40]; int toneF=0; SerialC Serial; WiFiC WiFi;
-isrfn isrs[40]; void* isrArg[40]; std::map<std::string,long> nvsMap;
+isrfn isrs[40]; std::map<std::string,long> nvsMap;
 float distCm[40]; int lastTrig[40];
 #include "../../02-versao-completa/sketch.ino"
 // trig 13 -> echo 14 ; trig 27 -> echo 34
 void digitalWrite(int p,int v){
   int prev=pinv[p]; pinv[p]=v;
   if((p==13||p==27)&&prev==HIGH&&v==LOW&&isrs[p==13?14:34]){ int e=p==13?14:34; float d=distCm[e];
-    if(d<=400){ pinv[e]=HIGH; isrs[e](isrArg[e]); uoff+=(unsigned long)(d*58); pinv[e]=LOW; isrs[e](isrArg[e]); } }
+    if(d<=400){ pinv[e]=HIGH; isrs[e](); uoff+=(unsigned long)(d*58); pinv[e]=LOW; isrs[e](); } }
 }
 void run(unsigned long ms){for(unsigned long i=0;i<ms;i++){loop();T++;}}
 void press(int pin,unsigned long hold=100){

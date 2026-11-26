@@ -347,6 +347,11 @@ struct Estatisticas {
 } stats;
 
 bool somAtivo        = true;
+
+// Medição do eco dos HC-SR04 (escrita pelas interrupções) · [0]=entrada [1]=saída
+volatile unsigned long ecoInicio[2]  = { 0, 0 };
+volatile unsigned long ecoDuracao[2] = { 0, 0 };
+volatile bool          ecoPronto[2]  = { false, false };
 bool dadosAlterados  = false;   // há algo para gravar na NVS
 bool wifiConectado   = false;
 bool servidorAtivo   = false;
@@ -412,9 +417,7 @@ struct SensorUltrassonico {
   uint8_t     pinoTrig;
   uint8_t     pinoEcho;
 
-  volatile unsigned long inicioEco  = 0;
-  volatile unsigned long duracaoEco = 0;
-  volatile bool          ecoPronto  = false;
+  uint8_t     id;              // 0 = entrada, 1 = saída (índice nos vetores do eco)
 
   unsigned long instanteDisparo = 0;
   bool          aguardandoEco   = false;
@@ -422,23 +425,18 @@ struct SensorUltrassonico {
   bool          presente        = false;
   uint8_t       confirmacoes    = 0;
 
-  SensorUltrassonico(const char* n, uint8_t trig, uint8_t echo)
-    : nome(n), pinoTrig(trig), pinoEcho(echo) {}
+  SensorUltrassonico(const char* n, uint8_t i, uint8_t trig, uint8_t echo)
+    : nome(n), pinoTrig(trig), pinoEcho(echo), id(i) {}
 
-  // Rotina de interrupção: o corpo fica FORA da struct (ver abaixo).
-  // Definida dentro dela, viraria "inline" e o linker do ESP32 falha
-  // com "dangerous relocation: l32r" ao colocá-la na IRAM.
-  static void aoMudarEco(void* arg);
 
   void iniciar() {
     pinMode(pinoTrig, OUTPUT);
     digitalWrite(pinoTrig, LOW);
-    pinMode(pinoEcho, INPUT);
-    attachInterruptArg(digitalPinToInterrupt(pinoEcho), aoMudarEco, this, CHANGE);
+    pinMode(pinoEcho, INPUT);       // a interrupção é ligada no setup()
   }
 
   void disparar() {
-    ecoPronto = false;
+    ecoPronto[id] = false;
     digitalWrite(pinoTrig, HIGH);
     delayMicroseconds(10);              // pulso de 10 µs exigido pelo HC-SR04
     digitalWrite(pinoTrig, LOW);
@@ -451,8 +449,8 @@ struct SensorUltrassonico {
     if (!aguardandoEco) return SENSOR_NADA;
 
     float d;
-    if (ecoPronto) {
-      d = duracaoEco / 58.0f;                       // µs → cm
+    if (ecoPronto[id]) {
+      d = ecoDuracao[id] / 58.0f;                       // µs → cm
       if (d > US_FORA_ALCANCE_CM) d = US_FORA_ALCANCE_CM;
     } else if (millis() - instanteDisparo >= US_TIMEOUT_MS) {
       d = US_FORA_ALCANCE_CM;                       // sem eco
@@ -475,17 +473,6 @@ struct SensorUltrassonico {
     return presente ? SENSOR_CHEGOU : SENSOR_SAIU;
   }
 };
-
-// ISR do eco do HC-SR04 (na IRAM, fora da struct)
-void IRAM_ATTR SensorUltrassonico::aoMudarEco(void* arg) {
-  SensorUltrassonico* s = static_cast<SensorUltrassonico*>(arg);
-  if (gpio_get_level((gpio_num_t)s->pinoEcho)) {   // borda de subida
-    s->inicioEco = micros();
-  } else {                                          // borda de descida
-    s->duracaoEco = micros() - s->inicioEco;
-    s->ecoPronto  = true;
-  }
-}
 
 // ═════════════════════════════════════════════════════════════════════
 //  Cancela — máquina de estados com movimento suave e segurança
@@ -632,6 +619,19 @@ const char* nomeEstado(EstadoCancela e) {
   return "?";
 }
 
+// ─── Interrupções do eco dos HC-SR04 ───
+// Funções livres com IRAM_ATTR (padrão do ESP32). Medem quanto tempo o
+// pino ECHO fica em nível alto: esse tempo é proporcional à distância.
+void IRAM_ATTR isrEcoEntrada() {
+  if (gpio_get_level((gpio_num_t)PIN_US_ENT_ECHO)) ecoInicio[0] = micros();
+  else { ecoDuracao[0] = micros() - ecoInicio[0]; ecoPronto[0] = true; }
+}
+
+void IRAM_ATTR isrEcoSaida() {
+  if (gpio_get_level((gpio_num_t)PIN_US_SAI_ECHO)) ecoInicio[1] = micros();
+  else { ecoDuracao[1] = micros() - ecoInicio[1]; ecoPronto[1] = true; }
+}
+
 // ═════════════════════════════════════════════════════════════════════
 //  Histórico de eventos (buffer circular)
 // ═════════════════════════════════════════════════════════════════════
@@ -672,8 +672,8 @@ void registrar(TipoEvento tipo, const char* formato, ...) {
 // ═════════════════════════════════════════════════════════════════════
 Botao              btnEntrada     { PIN_BTN_ENTRADA };
 Botao              btnSaida       { PIN_BTN_SAIDA };
-SensorUltrassonico sensorEntrada  { "entrada", PIN_US_ENT_TRIG, PIN_US_ENT_ECHO };
-SensorUltrassonico sensorSaida    { "saida",   PIN_US_SAI_TRIG, PIN_US_SAI_ECHO };
+SensorUltrassonico sensorEntrada  { "entrada", 0, PIN_US_ENT_TRIG, PIN_US_ENT_ECHO };
+SensorUltrassonico sensorSaida    { "saida",   1, PIN_US_SAI_TRIG, PIN_US_SAI_ECHO };
 Cancela            cancelaEntrada { "entrada", PIN_SERVO_ENTRADA, &sensorEntrada };
 Cancela            cancelaSaida   { "saída",   PIN_SERVO_SAIDA,   &sensorSaida };
 Buzzer             buzzer         { PIN_BUZZER };
@@ -1089,6 +1089,8 @@ void setup() {
   btnSaida.iniciar();
   sensorEntrada.iniciar();
   sensorSaida.iniciar();
+  attachInterrupt(digitalPinToInterrupt(PIN_US_ENT_ECHO), isrEcoEntrada, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(PIN_US_SAI_ECHO), isrEcoSaida,   CHANGE);
 
   ESP32PWM::allocateTimer(0);
   ESP32PWM::allocateTimer(1);

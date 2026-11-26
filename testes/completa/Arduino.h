@@ -25,9 +25,11 @@ void digitalWrite(int p,int v);
 inline void delayMicroseconds(int){}
 inline void delay(int){}
 inline int digitalPinToInterrupt(int p){return p;}
-typedef void(*isrfn)(void*);
-extern isrfn isrs[40]; extern void* isrArg[40];
-inline void attachInterruptArg(int p,isrfn f,void*a,int){isrs[p]=f;isrArg[p]=a;}
+typedef void(*isrfn)();
+extern isrfn isrs[40];
+inline void attachInterrupt(int p,isrfn f,int){isrs[p]=f;}
+typedef int gpio_num_t;
+inline int gpio_get_level(gpio_num_t p){return pinv[p];}
 inline void tone(int,unsigned f){toneF=f;}
 inline void noTone(int){toneF=0;}
 template<class A,class B,class C> A constrain(A x,B a,C b){return x<a?a:(x>b?b:x);}
