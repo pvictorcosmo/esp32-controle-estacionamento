@@ -425,15 +425,10 @@ struct SensorUltrassonico {
   SensorUltrassonico(const char* n, uint8_t trig, uint8_t echo)
     : nome(n), pinoTrig(trig), pinoEcho(echo) {}
 
-  static void IRAM_ATTR aoMudarEco(void* arg) {
-    SensorUltrassonico* s = static_cast<SensorUltrassonico*>(arg);
-    if (digitalRead(s->pinoEcho) == HIGH) {
-      s->inicioEco = micros();
-    } else {
-      s->duracaoEco = micros() - s->inicioEco;
-      s->ecoPronto  = true;
-    }
-  }
+  // Rotina de interrupção: o corpo fica FORA da struct (ver abaixo).
+  // Definida dentro dela, viraria "inline" e o linker do ESP32 falha
+  // com "dangerous relocation: l32r" ao colocá-la na IRAM.
+  static void aoMudarEco(void* arg);
 
   void iniciar() {
     pinMode(pinoTrig, OUTPUT);
@@ -480,6 +475,17 @@ struct SensorUltrassonico {
     return presente ? SENSOR_CHEGOU : SENSOR_SAIU;
   }
 };
+
+// ISR do eco do HC-SR04 (na IRAM, fora da struct)
+void IRAM_ATTR SensorUltrassonico::aoMudarEco(void* arg) {
+  SensorUltrassonico* s = static_cast<SensorUltrassonico*>(arg);
+  if (gpio_get_level((gpio_num_t)s->pinoEcho)) {   // borda de subida
+    s->inicioEco = micros();
+  } else {                                          // borda de descida
+    s->duracaoEco = micros() - s->inicioEco;
+    s->ecoPronto  = true;
+  }
+}
 
 // ═════════════════════════════════════════════════════════════════════
 //  Cancela — máquina de estados com movimento suave e segurança
